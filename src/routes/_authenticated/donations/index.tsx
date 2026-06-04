@@ -27,7 +27,7 @@ function BrowseDonations() {
     queryKey: ["donations", status],
     queryFn: async () => {
       let query = supabase.from("donations").select("*").order("created_at", { ascending: false });
-      if (status !== "all") query = query.eq("status", status as DonationRow["status"]);
+      if (status !== "all") query = query.eq("status", status as "available" | "claimed" | "picked_up" | "completed" | "expired" | "cancelled");
       const { data } = await query;
       return (data ?? []) as DonationRow[];
     },
