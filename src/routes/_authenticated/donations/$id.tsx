@@ -1,6 +1,8 @@
 import { createFileRoute, useNavigate } from "@tanstack/react-router";
 import { useQuery, useQueryClient } from "@tanstack/react-query";
-import { ArrowLeft, Clock, MapPin, Package, Phone, User as UserIcon } from "lucide-react";
+import { useState } from "react";
+import { useServerFn } from "@tanstack/react-start";
+import { ArrowLeft, Clock, MapPin, Package, Phone, Sparkles, User as UserIcon } from "lucide-react";
 import { toast } from "sonner";
 import { format } from "date-fns";
 import { supabase } from "@/integrations/supabase/client";
@@ -9,6 +11,7 @@ import { Button } from "@/components/ui/button";
 import { Card } from "@/components/ui/card";
 import { Badge } from "@/components/ui/badge";
 import { Separator } from "@/components/ui/separator";
+import { suggestNgoMatches } from "@/lib/matching.functions";
 
 export const Route = createFileRoute("/_authenticated/donations/$id")({
   head: () => ({ meta: [{ title: "Donation — Food Rescue Network" }] }),
@@ -20,6 +23,23 @@ function DonationDetail() {
   const navigate = useNavigate();
   const { user, role } = useAuth();
   const qc = useQueryClient();
+  const runMatch = useServerFn(suggestNgoMatches);
+  const [matches, setMatches] = useState<Array<{ ngo_id: string; name: string; city: string | null; score: number; reason: string }> | null>(null);
+  const [matching, setMatching] = useState(false);
+
+  const onSuggest = async () => {
+    setMatching(true);
+    try {
+      const res = await runMatch({ data: { donationId: id } });
+      setMatches(res.matches);
+      if (res.matches.length === 0) toast.info("No NGO partners found yet.");
+    } catch (e) {
+      toast.error(e instanceof Error ? e.message : "Match failed");
+    } finally {
+      setMatching(false);
+    }
+  };
+
 
   const { data, isLoading } = useQuery({
     queryKey: ["donation", id],
@@ -146,6 +166,35 @@ function DonationDetail() {
               )}
             </div>
           </Card>
+
+          {isDonor && d.status === "available" && (
+            <Card className="p-6">
+              <div className="flex items-center gap-2">
+                <Sparkles className="h-4 w-4 text-primary" />
+                <h3 className="font-serif text-xl">AI NGO matches</h3>
+              </div>
+              <p className="mt-1 text-sm text-muted-foreground">
+                Get ranked partner suggestions for this donation.
+              </p>
+              <Button onClick={onSuggest} disabled={matching} className="mt-4 w-full" variant="outline">
+                {matching ? "Finding matches…" : "Suggest NGOs"}
+              </Button>
+              {matches && matches.length > 0 && (
+                <ul className="mt-4 space-y-3">
+                  {matches.map((m) => (
+                    <li key={m.ngo_id} className="rounded-lg border border-border/60 p-3">
+                      <div className="flex items-center justify-between gap-2">
+                        <div className="font-medium">{m.name}</div>
+                        <Badge variant="secondary">{m.score}</Badge>
+                      </div>
+                      {m.city && <div className="text-xs text-muted-foreground">{m.city}</div>}
+                      <p className="mt-1 text-sm text-muted-foreground">{m.reason}</p>
+                    </li>
+                  ))}
+                </ul>
+              )}
+            </Card>
+          )}
         </div>
       </div>
     </div>

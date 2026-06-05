@@ -36,6 +36,7 @@ export function Navbar() {
             <>
               <Link to="/dashboard" className="text-muted-foreground transition hover:text-foreground">Dashboard</Link>
               <Link to="/donations" className="text-muted-foreground transition hover:text-foreground">Browse</Link>
+              <Link to="/analytics" className="text-muted-foreground transition hover:text-foreground">Analytics</Link>
               {role === "donor" && (
                 <Link to="/donations/new" className="text-muted-foreground transition hover:text-foreground">Post donation</Link>
               )}
