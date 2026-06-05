@@ -14,6 +14,51 @@ export type Database = {
   }
   public: {
     Tables: {
+      assignments: {
+        Row: {
+          assigned_at: string
+          assigned_by: string | null
+          created_at: string
+          delivered_at: string | null
+          donation_id: string
+          id: string
+          notes: string | null
+          picked_up_at: string | null
+          proof_url: string | null
+          status: string
+          updated_at: string
+          volunteer_id: string
+        }
+        Insert: {
+          assigned_at?: string
+          assigned_by?: string | null
+          created_at?: string
+          delivered_at?: string | null
+          donation_id: string
+          id?: string
+          notes?: string | null
+          picked_up_at?: string | null
+          proof_url?: string | null
+          status?: string
+          updated_at?: string
+          volunteer_id: string
+        }
+        Update: {
+          assigned_at?: string
+          assigned_by?: string | null
+          created_at?: string
+          delivered_at?: string | null
+          donation_id?: string
+          id?: string
+          notes?: string | null
+          picked_up_at?: string | null
+          proof_url?: string | null
+          status?: string
+          updated_at?: string
+          volunteer_id?: string
+        }
+        Relationships: []
+      }
       donation_claims: {
         Row: {
           created_at: string
@@ -51,6 +96,36 @@ export type Database = {
             referencedColumns: ["id"]
           },
         ]
+      }
+      donation_status_history: {
+        Row: {
+          changed_by: string | null
+          created_at: string
+          donation_id: string
+          from_status: string | null
+          id: string
+          notes: string | null
+          to_status: string
+        }
+        Insert: {
+          changed_by?: string | null
+          created_at?: string
+          donation_id: string
+          from_status?: string | null
+          id?: string
+          notes?: string | null
+          to_status: string
+        }
+        Update: {
+          changed_by?: string | null
+          created_at?: string
+          donation_id?: string
+          from_status?: string | null
+          id?: string
+          notes?: string | null
+          to_status?: string
+        }
+        Relationships: []
       }
       donations: {
         Row: {
@@ -121,6 +196,39 @@ export type Database = {
         }
         Relationships: []
       }
+      notifications: {
+        Row: {
+          body: string | null
+          created_at: string
+          id: string
+          link: string | null
+          read: boolean
+          title: string
+          type: string
+          user_id: string
+        }
+        Insert: {
+          body?: string | null
+          created_at?: string
+          id?: string
+          link?: string | null
+          read?: boolean
+          title: string
+          type: string
+          user_id: string
+        }
+        Update: {
+          body?: string | null
+          created_at?: string
+          id?: string
+          link?: string | null
+          read?: boolean
+          title?: string
+          type?: string
+          user_id?: string
+        }
+        Relationships: []
+      }
       profiles: {
         Row: {
           address: string | null
@@ -184,6 +292,54 @@ export type Database = {
         }
         Relationships: []
       }
+      volunteer_applications: {
+        Row: {
+          city: string | null
+          created_at: string
+          full_name: string
+          id: string
+          license_number: string | null
+          notes: string | null
+          phone: string
+          reviewed_at: string | null
+          reviewed_by: string | null
+          status: string
+          updated_at: string
+          user_id: string
+          vehicle_type: string
+        }
+        Insert: {
+          city?: string | null
+          created_at?: string
+          full_name: string
+          id?: string
+          license_number?: string | null
+          notes?: string | null
+          phone: string
+          reviewed_at?: string | null
+          reviewed_by?: string | null
+          status?: string
+          updated_at?: string
+          user_id: string
+          vehicle_type: string
+        }
+        Update: {
+          city?: string | null
+          created_at?: string
+          full_name?: string
+          id?: string
+          license_number?: string | null
+          notes?: string | null
+          phone?: string
+          reviewed_at?: string | null
+          reviewed_by?: string | null
+          status?: string
+          updated_at?: string
+          user_id?: string
+          vehicle_type?: string
+        }
+        Relationships: []
+      }
     }
     Views: {
       [_ in never]: never
@@ -203,6 +359,7 @@ export type Database = {
       donation_status:
         | "available"
         | "claimed"
+        | "assigned"
         | "picked_up"
         | "completed"
         | "expired"
@@ -339,6 +496,7 @@ export const Constants = {
       donation_status: [
         "available",
         "claimed",
+        "assigned",
         "picked_up",
         "completed",
         "expired",
