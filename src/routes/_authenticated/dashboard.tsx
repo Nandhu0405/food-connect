@@ -15,6 +15,19 @@ export const Route = createFileRoute("/_authenticated/dashboard")({
 
 function Dashboard() {
   const { user, role } = useAuth();
+  const qc = useQueryClient();
+
+  useEffect(() => {
+    const ch = supabase
+      .channel("dashboard-live")
+      .on("postgres_changes", { event: "*", schema: "public", table: "donations" }, () => {
+        qc.invalidateQueries({ queryKey: ["dashboard-stats"] });
+        qc.invalidateQueries({ queryKey: ["recent-donations"] });
+      })
+      .subscribe();
+    return () => { supabase.removeChannel(ch); };
+  }, [qc]);
+
 
   const { data: stats } = useQuery({
     queryKey: ["dashboard-stats", user?.id, role],
