@@ -166,6 +166,35 @@ function DonationDetail() {
               )}
             </div>
           </Card>
+
+          {isDonor && d.status === "available" && (
+            <Card className="p-6">
+              <div className="flex items-center gap-2">
+                <Sparkles className="h-4 w-4 text-primary" />
+                <h3 className="font-serif text-xl">AI NGO matches</h3>
+              </div>
+              <p className="mt-1 text-sm text-muted-foreground">
+                Get ranked partner suggestions for this donation.
+              </p>
+              <Button onClick={onSuggest} disabled={matching} className="mt-4 w-full" variant="outline">
+                {matching ? "Finding matches…" : "Suggest NGOs"}
+              </Button>
+              {matches && matches.length > 0 && (
+                <ul className="mt-4 space-y-3">
+                  {matches.map((m) => (
+                    <li key={m.ngo_id} className="rounded-lg border border-border/60 p-3">
+                      <div className="flex items-center justify-between gap-2">
+                        <div className="font-medium">{m.name}</div>
+                        <Badge variant="secondary">{m.score}</Badge>
+                      </div>
+                      {m.city && <div className="text-xs text-muted-foreground">{m.city}</div>}
+                      <p className="mt-1 text-sm text-muted-foreground">{m.reason}</p>
+                    </li>
+                  ))}
+                </ul>
+              )}
+            </Card>
+          )}
         </div>
       </div>
     </div>
