@@ -7,8 +7,22 @@ interface Match {
   name: string;
   city: string | null;
   score: number;
+  breakdown: { distance: number; foodType: number; quantity: number; capacity: number; urgency: number; expiry: number };
   reason: string;
 }
+
+function haversineKm(lat1?: number | null, lon1?: number | null, lat2?: number | null, lon2?: number | null): number | null {
+  if (lat1 == null || lon1 == null || lat2 == null || lon2 == null) return null;
+  const R = 6371;
+  const toRad = (d: number) => (d * Math.PI) / 180;
+  const dLat = toRad(lat2 - lat1);
+  const dLon = toRad(lon2 - lon1);
+  const a = Math.sin(dLat / 2) ** 2 + Math.cos(toRad(lat1)) * Math.cos(toRad(lat2)) * Math.sin(dLon / 2) ** 2;
+  return 2 * R * Math.asin(Math.sqrt(a));
+}
+
+// Weights (sum = 100)
+const W = { distance: 30, foodType: 15, quantity: 15, capacity: 10, urgency: 20, expiry: 10 };
 
 export const suggestNgoMatches = createServerFn({ method: "POST" })
   .middleware([requireSupabaseAuth])
@@ -20,7 +34,6 @@ export const suggestNgoMatches = createServerFn({ method: "POST" })
       .from("donations").select("*").eq("id", data.donationId).single();
     if (dErr || !donation) throw new Error("Donation not found");
 
-    // Fetch NGOs via admin client so we can join roles
     const { supabaseAdmin } = await import("@/integrations/supabase/client.server");
     const { data: ngoRoles } = await supabaseAdmin
       .from("user_roles").select("user_id").eq("role", "ngo");
@@ -29,66 +42,104 @@ export const suggestNgoMatches = createServerFn({ method: "POST" })
 
     const { data: ngos } = await supabaseAdmin
       .from("profiles")
-      .select("id, display_name, org_name, city, address")
+      .select("id, display_name, org_name, city, address, latitude, longitude")
       .in("id", ngoIds);
 
-    const candidates = (ngos ?? []).slice(0, 30).map((n) => ({
-      id: n.id,
-      name: n.org_name || n.display_name || "NGO",
-      city: n.city,
-      address: n.address,
-    }));
+    // NGO activity (load count of accepted/completed in last 30 days as capacity proxy)
+    const since = new Date(Date.now() - 30 * 86_400_000).toISOString();
+    const { data: activity } = await supabaseAdmin
+      .from("donations")
+      .select("claimed_by")
+      .gte("created_at", since)
+      .not("claimed_by", "is", null);
+    const loadByNgo = new Map<string, number>();
+    (activity ?? []).forEach((r) => loadByNgo.set(r.claimed_by!, (loadByNgo.get(r.claimed_by!) ?? 0) + 1));
 
-    const prompt = `You are matching a surplus food donation to NGO partners.
+    const now = Date.now();
+    const expiresIn = Math.max(0, new Date(donation.expires_at).getTime() - now) / 3_600_000; // hours
+    const pickupWindow = Math.max(0, new Date(donation.pickup_to).getTime() - now) / 3_600_000;
+    const foodType = (donation.food_type || "").toLowerCase();
 
-Donation:
-- Title: ${donation.title}
-- Food type: ${donation.food_type}
-- Quantity: ${donation.quantity} ${donation.unit}
-- City: ${donation.city ?? "Unknown"}
-- Pickup address: ${donation.pickup_address}
-- Pickup window ends: ${donation.pickup_to}
+    const candidates = (ngos ?? []).map((n) => {
+      // Distance
+      let distScore = 0;
+      const km = haversineKm(donation.latitude, donation.longitude, n.latitude, n.longitude);
+      if (km != null) {
+        // 0km -> 100, 30km+ -> 0
+        distScore = Math.max(0, 100 - (km / 30) * 100);
+      } else if (n.city && donation.city && n.city.toLowerCase() === donation.city.toLowerCase()) {
+        distScore = 80;
+      } else if (n.city || donation.city) {
+        distScore = 30;
+      }
 
-NGO candidates (JSON):
-${JSON.stringify(candidates)}
+      // Food type compatibility (no NGO preferences stored — use neutral score boosted if NGO name hints)
+      const orgText = (n.org_name || n.display_name || "").toLowerCase();
+      let foodScore = 60;
+      if (foodType.includes("veg") && (orgText.includes("vegan") || orgText.includes("veg"))) foodScore = 95;
+      if (foodType.includes("meat") && orgText.includes("vegan")) foodScore = 10;
+      if (foodType.includes("baker") || foodType.includes("bread")) foodScore = Math.max(foodScore, 70);
 
-Return the top ${Math.min(5, candidates.length)} NGOs as strict JSON:
-{ "matches": [ { "ngo_id": "<id>", "score": 0-100, "reason": "<one short sentence>" } ] }
-Rank primarily by city match, then logistical fit. Only valid JSON, no prose.`;
+      // Quantity fit (assume mid-sized NGOs handle 5-200 servings well)
+      const qty = Number(donation.quantity) || 0;
+      const quantityScore = qty <= 0 ? 50 : qty < 5 ? 60 : qty <= 200 ? 90 : qty <= 500 ? 65 : 40;
 
-    const res = await fetch("https://ai.gateway.lovable.dev/v1/chat/completions", {
-      method: "POST",
-      headers: {
-        "Content-Type": "application/json",
-        Authorization: `Bearer ${process.env.LOVABLE_API_KEY}`,
-      },
-      body: JSON.stringify({
-        model: "google/gemini-2.5-flash",
-        messages: [
-          { role: "system", content: "You output only valid minified JSON." },
-          { role: "user", content: prompt },
-        ],
-      }),
+      // Capacity: fewer current claims = more capacity available
+      const load = loadByNgo.get(n.id) ?? 0;
+      const capacityScore = Math.max(20, 100 - load * 12);
+
+      // Urgency: shorter pickup window = higher score for nearby/active NGOs
+      const urgencyScore = pickupWindow <= 2 ? 95 : pickupWindow <= 6 ? 80 : pickupWindow <= 24 ? 60 : 40;
+
+      // Expiry: shorter = higher
+      const expiryScore = expiresIn <= 4 ? 95 : expiresIn <= 12 ? 75 : expiresIn <= 48 ? 55 : 35;
+
+      const total =
+        (distScore * W.distance +
+          foodScore * W.foodType +
+          quantityScore * W.quantity +
+          capacityScore * W.capacity +
+          urgencyScore * W.urgency +
+          expiryScore * W.expiry) /
+        100;
+
+      const reasons: string[] = [];
+      if (distScore >= 80) reasons.push(km != null ? `~${km.toFixed(1)}km away` : "same city");
+      else if (distScore >= 40) reasons.push("nearby region");
+      if (foodScore >= 85) reasons.push("strong food-type match");
+      if (capacityScore >= 80) reasons.push("low current load");
+      if (urgencyScore >= 80) reasons.push("can act on tight pickup window");
+      if (expiryScore >= 80) reasons.push("handles soon-to-expire items");
+      const reason = reasons.length ? reasons.join(" • ") : "balanced overall fit";
+
+      return {
+        ngo_id: n.id,
+        name: n.org_name || n.display_name || "NGO",
+        city: n.city,
+        score: Math.round(total),
+        breakdown: {
+          distance: Math.round(distScore),
+          foodType: Math.round(foodScore),
+          quantity: Math.round(quantityScore),
+          capacity: Math.round(capacityScore),
+          urgency: Math.round(urgencyScore),
+          expiry: Math.round(expiryScore),
+        },
+        reason,
+      } satisfies Match;
     });
 
-    if (!res.ok) {
-      const text = await res.text();
-      throw new Error(`AI gateway error ${res.status}: ${text.slice(0, 200)}`);
-    }
-    const json = await res.json();
-    const content: string = json.choices?.[0]?.message?.content ?? "{}";
-    const cleaned = content.replace(/```json|```/g, "").trim();
-    let parsed: { matches?: Array<{ ngo_id: string; score: number; reason: string }> } = {};
-    try { parsed = JSON.parse(cleaned); } catch { parsed = { matches: [] }; }
+    candidates.sort((a, b) => b.score - a.score);
+    return { matches: candidates.slice(0, 5) };
+  });
 
-    const byId = new Map(candidates.map((c) => [c.id, c]));
-    const matches: Match[] = (parsed.matches ?? [])
-      .map((m) => {
-        const c = byId.get(m.ngo_id);
-        if (!c) return null;
-        return { ngo_id: c.id, name: c.name, city: c.city, score: m.score, reason: m.reason };
-      })
-      .filter((x): x is Match => x !== null);
-
-    return { matches };
+export const listApprovedVolunteers = createServerFn({ method: "GET" })
+  .middleware([requireSupabaseAuth])
+  .handler(async ({ context }) => {
+    const { supabase } = context;
+    const { data: apps } = await supabase
+      .from("volunteer_applications")
+      .select("user_id, full_name, phone, vehicle_type, city")
+      .eq("status", "approved");
+    return { volunteers: apps ?? [] };
   });
