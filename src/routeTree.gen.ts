@@ -15,8 +15,11 @@ import { Route as IndexRouteImport } from './routes/index'
 import { Route as AuthenticatedDashboardRouteImport } from './routes/_authenticated/dashboard'
 import { Route as AuthenticatedAnalyticsRouteImport } from './routes/_authenticated/analytics'
 import { Route as AuthenticatedDonationsIndexRouteImport } from './routes/_authenticated/donations/index'
+import { Route as AuthenticatedVolunteersMyRouteImport } from './routes/_authenticated/volunteers/my'
+import { Route as AuthenticatedVolunteersApplyRouteImport } from './routes/_authenticated/volunteers/apply'
 import { Route as AuthenticatedDonationsNewRouteImport } from './routes/_authenticated/donations/new'
 import { Route as AuthenticatedDonationsIdRouteImport } from './routes/_authenticated/donations/$id'
+import { Route as AuthenticatedAdminVolunteersRouteImport } from './routes/_authenticated/admin/volunteers'
 
 const AuthRoute = AuthRouteImport.update({
   id: '/auth',
@@ -48,6 +51,18 @@ const AuthenticatedDonationsIndexRoute =
     path: '/donations/',
     getParentRoute: () => AuthenticatedRouteRoute,
   } as any)
+const AuthenticatedVolunteersMyRoute =
+  AuthenticatedVolunteersMyRouteImport.update({
+    id: '/volunteers/my',
+    path: '/volunteers/my',
+    getParentRoute: () => AuthenticatedRouteRoute,
+  } as any)
+const AuthenticatedVolunteersApplyRoute =
+  AuthenticatedVolunteersApplyRouteImport.update({
+    id: '/volunteers/apply',
+    path: '/volunteers/apply',
+    getParentRoute: () => AuthenticatedRouteRoute,
+  } as any)
 const AuthenticatedDonationsNewRoute =
   AuthenticatedDonationsNewRouteImport.update({
     id: '/donations/new',
@@ -60,14 +75,23 @@ const AuthenticatedDonationsIdRoute =
     path: '/donations/$id',
     getParentRoute: () => AuthenticatedRouteRoute,
   } as any)
+const AuthenticatedAdminVolunteersRoute =
+  AuthenticatedAdminVolunteersRouteImport.update({
+    id: '/admin/volunteers',
+    path: '/admin/volunteers',
+    getParentRoute: () => AuthenticatedRouteRoute,
+  } as any)
 
 export interface FileRoutesByFullPath {
   '/': typeof IndexRoute
   '/auth': typeof AuthRoute
   '/analytics': typeof AuthenticatedAnalyticsRoute
   '/dashboard': typeof AuthenticatedDashboardRoute
+  '/admin/volunteers': typeof AuthenticatedAdminVolunteersRoute
   '/donations/$id': typeof AuthenticatedDonationsIdRoute
   '/donations/new': typeof AuthenticatedDonationsNewRoute
+  '/volunteers/apply': typeof AuthenticatedVolunteersApplyRoute
+  '/volunteers/my': typeof AuthenticatedVolunteersMyRoute
   '/donations/': typeof AuthenticatedDonationsIndexRoute
 }
 export interface FileRoutesByTo {
@@ -75,8 +99,11 @@ export interface FileRoutesByTo {
   '/auth': typeof AuthRoute
   '/analytics': typeof AuthenticatedAnalyticsRoute
   '/dashboard': typeof AuthenticatedDashboardRoute
+  '/admin/volunteers': typeof AuthenticatedAdminVolunteersRoute
   '/donations/$id': typeof AuthenticatedDonationsIdRoute
   '/donations/new': typeof AuthenticatedDonationsNewRoute
+  '/volunteers/apply': typeof AuthenticatedVolunteersApplyRoute
+  '/volunteers/my': typeof AuthenticatedVolunteersMyRoute
   '/donations': typeof AuthenticatedDonationsIndexRoute
 }
 export interface FileRoutesById {
@@ -86,8 +113,11 @@ export interface FileRoutesById {
   '/auth': typeof AuthRoute
   '/_authenticated/analytics': typeof AuthenticatedAnalyticsRoute
   '/_authenticated/dashboard': typeof AuthenticatedDashboardRoute
+  '/_authenticated/admin/volunteers': typeof AuthenticatedAdminVolunteersRoute
   '/_authenticated/donations/$id': typeof AuthenticatedDonationsIdRoute
   '/_authenticated/donations/new': typeof AuthenticatedDonationsNewRoute
+  '/_authenticated/volunteers/apply': typeof AuthenticatedVolunteersApplyRoute
+  '/_authenticated/volunteers/my': typeof AuthenticatedVolunteersMyRoute
   '/_authenticated/donations/': typeof AuthenticatedDonationsIndexRoute
 }
 export interface FileRouteTypes {
@@ -97,8 +127,11 @@ export interface FileRouteTypes {
     | '/auth'
     | '/analytics'
     | '/dashboard'
+    | '/admin/volunteers'
     | '/donations/$id'
     | '/donations/new'
+    | '/volunteers/apply'
+    | '/volunteers/my'
     | '/donations/'
   fileRoutesByTo: FileRoutesByTo
   to:
@@ -106,8 +139,11 @@ export interface FileRouteTypes {
     | '/auth'
     | '/analytics'
     | '/dashboard'
+    | '/admin/volunteers'
     | '/donations/$id'
     | '/donations/new'
+    | '/volunteers/apply'
+    | '/volunteers/my'
     | '/donations'
   id:
     | '__root__'
@@ -116,8 +152,11 @@ export interface FileRouteTypes {
     | '/auth'
     | '/_authenticated/analytics'
     | '/_authenticated/dashboard'
+    | '/_authenticated/admin/volunteers'
     | '/_authenticated/donations/$id'
     | '/_authenticated/donations/new'
+    | '/_authenticated/volunteers/apply'
+    | '/_authenticated/volunteers/my'
     | '/_authenticated/donations/'
   fileRoutesById: FileRoutesById
 }
@@ -171,6 +210,20 @@ declare module '@tanstack/react-router' {
       preLoaderRoute: typeof AuthenticatedDonationsIndexRouteImport
       parentRoute: typeof AuthenticatedRouteRoute
     }
+    '/_authenticated/volunteers/my': {
+      id: '/_authenticated/volunteers/my'
+      path: '/volunteers/my'
+      fullPath: '/volunteers/my'
+      preLoaderRoute: typeof AuthenticatedVolunteersMyRouteImport
+      parentRoute: typeof AuthenticatedRouteRoute
+    }
+    '/_authenticated/volunteers/apply': {
+      id: '/_authenticated/volunteers/apply'
+      path: '/volunteers/apply'
+      fullPath: '/volunteers/apply'
+      preLoaderRoute: typeof AuthenticatedVolunteersApplyRouteImport
+      parentRoute: typeof AuthenticatedRouteRoute
+    }
     '/_authenticated/donations/new': {
       id: '/_authenticated/donations/new'
       path: '/donations/new'
@@ -185,22 +238,35 @@ declare module '@tanstack/react-router' {
       preLoaderRoute: typeof AuthenticatedDonationsIdRouteImport
       parentRoute: typeof AuthenticatedRouteRoute
     }
+    '/_authenticated/admin/volunteers': {
+      id: '/_authenticated/admin/volunteers'
+      path: '/admin/volunteers'
+      fullPath: '/admin/volunteers'
+      preLoaderRoute: typeof AuthenticatedAdminVolunteersRouteImport
+      parentRoute: typeof AuthenticatedRouteRoute
+    }
   }
 }
 
 interface AuthenticatedRouteRouteChildren {
   AuthenticatedAnalyticsRoute: typeof AuthenticatedAnalyticsRoute
   AuthenticatedDashboardRoute: typeof AuthenticatedDashboardRoute
+  AuthenticatedAdminVolunteersRoute: typeof AuthenticatedAdminVolunteersRoute
   AuthenticatedDonationsIdRoute: typeof AuthenticatedDonationsIdRoute
   AuthenticatedDonationsNewRoute: typeof AuthenticatedDonationsNewRoute
+  AuthenticatedVolunteersApplyRoute: typeof AuthenticatedVolunteersApplyRoute
+  AuthenticatedVolunteersMyRoute: typeof AuthenticatedVolunteersMyRoute
   AuthenticatedDonationsIndexRoute: typeof AuthenticatedDonationsIndexRoute
 }
 
 const AuthenticatedRouteRouteChildren: AuthenticatedRouteRouteChildren = {
   AuthenticatedAnalyticsRoute: AuthenticatedAnalyticsRoute,
   AuthenticatedDashboardRoute: AuthenticatedDashboardRoute,
+  AuthenticatedAdminVolunteersRoute: AuthenticatedAdminVolunteersRoute,
   AuthenticatedDonationsIdRoute: AuthenticatedDonationsIdRoute,
   AuthenticatedDonationsNewRoute: AuthenticatedDonationsNewRoute,
+  AuthenticatedVolunteersApplyRoute: AuthenticatedVolunteersApplyRoute,
+  AuthenticatedVolunteersMyRoute: AuthenticatedVolunteersMyRoute,
   AuthenticatedDonationsIndexRoute: AuthenticatedDonationsIndexRoute,
 }
 

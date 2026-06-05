@@ -2,6 +2,7 @@ import { createFileRoute, useNavigate } from "@tanstack/react-router";
 import { useState } from "react";
 import { toast } from "sonner";
 import { ArrowLeft } from "lucide-react";
+import { useServerFn } from "@tanstack/react-start";
 import { supabase } from "@/integrations/supabase/client";
 import { useAuth } from "@/lib/auth";
 import { Button } from "@/components/ui/button";
@@ -9,6 +10,7 @@ import { Card } from "@/components/ui/card";
 import { Input } from "@/components/ui/input";
 import { Label } from "@/components/ui/label";
 import { Textarea } from "@/components/ui/textarea";
+import { onDonationCreated } from "@/lib/lifecycle.functions";
 
 export const Route = createFileRoute("/_authenticated/donations/new")({
   head: () => ({ meta: [{ title: "Post a donation — Food Rescue Network" }] }),
@@ -24,6 +26,7 @@ function NewDonation() {
   const navigate = useNavigate();
   const { user, role } = useAuth();
   const [loading, setLoading] = useState(false);
+  const fireCreated = useServerFn(onDonationCreated);
 
   const now = new Date();
   const in2h = new Date(now.getTime() + 2 * 3600 * 1000);
@@ -71,6 +74,7 @@ function NewDonation() {
     setLoading(false);
     if (error) return toast.error(error.message);
     toast.success("Donation posted — nearby NGOs will see it now.");
+    try { await fireCreated({ data: { donationId: data!.id } }); } catch { /* non-blocking */ }
     navigate({ to: "/donations/$id", params: { id: data!.id } });
   };
 
