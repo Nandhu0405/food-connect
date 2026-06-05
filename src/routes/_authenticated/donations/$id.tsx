@@ -1,6 +1,8 @@
 import { createFileRoute, useNavigate } from "@tanstack/react-router";
 import { useQuery, useQueryClient } from "@tanstack/react-query";
-import { ArrowLeft, Clock, MapPin, Package, Phone, User as UserIcon } from "lucide-react";
+import { useState } from "react";
+import { useServerFn } from "@tanstack/react-start";
+import { ArrowLeft, Clock, MapPin, Package, Phone, Sparkles, User as UserIcon } from "lucide-react";
 import { toast } from "sonner";
 import { format } from "date-fns";
 import { supabase } from "@/integrations/supabase/client";
@@ -9,6 +11,7 @@ import { Button } from "@/components/ui/button";
 import { Card } from "@/components/ui/card";
 import { Badge } from "@/components/ui/badge";
 import { Separator } from "@/components/ui/separator";
+import { suggestNgoMatches } from "@/lib/matching.functions";
 
 export const Route = createFileRoute("/_authenticated/donations/$id")({
   head: () => ({ meta: [{ title: "Donation — Food Rescue Network" }] }),
