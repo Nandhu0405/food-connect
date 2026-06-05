@@ -23,6 +23,23 @@ function DonationDetail() {
   const navigate = useNavigate();
   const { user, role } = useAuth();
   const qc = useQueryClient();
+  const runMatch = useServerFn(suggestNgoMatches);
+  const [matches, setMatches] = useState<Array<{ ngo_id: string; name: string; city: string | null; score: number; reason: string }> | null>(null);
+  const [matching, setMatching] = useState(false);
+
+  const onSuggest = async () => {
+    setMatching(true);
+    try {
+      const res = await runMatch({ data: { donationId: id } });
+      setMatches(res.matches);
+      if (res.matches.length === 0) toast.info("No NGO partners found yet.");
+    } catch (e) {
+      toast.error(e instanceof Error ? e.message : "Match failed");
+    } finally {
+      setMatching(false);
+    }
+  };
+
 
   const { data, isLoading } = useQuery({
     queryKey: ["donation", id],
