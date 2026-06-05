@@ -10,6 +10,7 @@ import {
   DropdownMenuSeparator,
   DropdownMenuTrigger,
 } from "@/components/ui/dropdown-menu";
+import { NotificationsBell } from "@/components/NotificationsBell";
 
 export function Navbar() {
   const { user, role, signOut } = useAuth();
@@ -30,7 +31,7 @@ export function Navbar() {
           <span className="font-serif text-xl">Food Rescue Network</span>
         </Link>
 
-        <nav className="hidden items-center gap-7 text-sm md:flex">
+        <nav className="hidden items-center gap-6 text-sm lg:flex">
           <Link to="/" className="text-muted-foreground transition hover:text-foreground">Home</Link>
           {user && (
             <>
@@ -38,13 +39,20 @@ export function Navbar() {
               <Link to="/donations" className="text-muted-foreground transition hover:text-foreground">Browse</Link>
               <Link to="/analytics" className="text-muted-foreground transition hover:text-foreground">Analytics</Link>
               {role === "donor" && (
-                <Link to="/donations/new" className="text-muted-foreground transition hover:text-foreground">Post donation</Link>
+                <Link to="/donations/new" className="text-muted-foreground transition hover:text-foreground">Post</Link>
+              )}
+              {role === "volunteer" && (
+                <Link to="/volunteers/my" className="text-muted-foreground transition hover:text-foreground">My pickups</Link>
+              )}
+              {role === "admin" && (
+                <Link to="/admin/volunteers" className="text-muted-foreground transition hover:text-foreground">Approvals</Link>
               )}
             </>
           )}
         </nav>
 
         <div className="flex items-center gap-2">
+          {user && <NotificationsBell />}
           {user ? (
             <DropdownMenu>
               <DropdownMenuTrigger asChild>
@@ -60,6 +68,15 @@ export function Navbar() {
                 </DropdownMenuLabel>
                 <DropdownMenuSeparator />
                 <DropdownMenuItem onClick={() => navigate({ to: "/dashboard" })}>Dashboard</DropdownMenuItem>
+                {role === "volunteer" ? (
+                  <DropdownMenuItem onClick={() => navigate({ to: "/volunteers/my" })}>My pickups</DropdownMenuItem>
+                ) : (
+                  <DropdownMenuItem onClick={() => navigate({ to: "/volunteers/apply" })}>Become a volunteer</DropdownMenuItem>
+                )}
+                {role === "admin" && (
+                  <DropdownMenuItem onClick={() => navigate({ to: "/admin/volunteers" })}>Volunteer approvals</DropdownMenuItem>
+                )}
+                <DropdownMenuSeparator />
                 <DropdownMenuItem onClick={handleSignOut} className="text-destructive">
                   <LogOut className="mr-2 h-4 w-4" /> Sign out
                 </DropdownMenuItem>
